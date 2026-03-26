@@ -1,5 +1,7 @@
 ---
-const title = "Hi world";
+import { topics } from "../data/forum";
+
+const title = "Volvo CE Machine Systems Forum";
 ---
 
 <!DOCTYPE html>
@@ -10,26 +12,388 @@ const title = "Hi world";
     <title>{title}</title>
     <style>
       :root {
-        font-family: Arial, sans-serif;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         color-scheme: light;
+        --bg: #f3f0e8;
+        --panel: rgba(255, 255, 255, 0.82);
+        --panel-strong: #ffffff;
+        --ink: #1f2a2e;
+        --muted: #5b666e;
+        --line: rgba(31, 42, 46, 0.12);
+        --accent: #f4b400;
+        --accent-deep: #7a5c00;
+        --forest: #2f5d50;
+        --shadow: 0 24px 60px rgba(31, 42, 46, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
         min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(244, 180, 0, 0.18), transparent 28%),
+          radial-gradient(circle at top right, rgba(47, 93, 80, 0.18), transparent 24%),
+          linear-gradient(180deg, #ebe6da 0%, var(--bg) 55%, #f7f4ed 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 2rem 0 3rem;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0 1.5rem 1rem;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 700;
+      }
+
+      .brand-mark {
+        width: 2.5rem;
+        height: 2.5rem;
         display: grid;
         place-items: center;
-        background: #f4f7fb;
-        color: #1f2937;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--forest), #20363d);
+        color: #fff3c4;
+      }
+
+      .admin-button {
+        padding: 0.8rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 42, 46, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 10px 24px rgba(31, 42, 46, 0.08);
+        font-weight: 700;
+      }
+
+      .hero {
+        display: grid;
+        gap: 1.5rem;
+        padding: 1.5rem;
+      }
+
+      .hero-panel {
+        background: linear-gradient(135deg, rgba(47, 93, 80, 0.96), rgba(28, 42, 47, 0.94));
+        color: #f9faf7;
+        border-radius: 28px;
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-panel::after {
+        content: "";
+        position: absolute;
+        inset: auto -6rem -7rem auto;
+        width: 18rem;
+        height: 18rem;
+        border-radius: 50%;
+        background: rgba(244, 180, 0, 0.22);
+        filter: blur(10px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.8rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 0.82rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
 
       h1 {
+        margin: 1rem 0 0.75rem;
+        max-width: 11ch;
+        font-size: clamp(2.6rem, 6vw, 4.8rem);
+        line-height: 0.96;
+      }
+
+      .hero p {
         margin: 0;
-        font-size: clamp(2rem, 5vw, 4rem);
+        max-width: 64ch;
+        color: rgba(249, 250, 247, 0.86);
+        font-size: 1.05rem;
+        line-height: 1.7;
+      }
+
+      .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.85rem;
+        margin-top: 1.6rem;
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-stats div {
+        padding: 1rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .hero-stats strong {
+        display: block;
+        font-size: 1.5rem;
+        color: #fff4c7;
+      }
+
+      .hero-stats span {
+        color: rgba(249, 250, 247, 0.76);
+        font-size: 0.9rem;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 2rem 1.5rem 1rem;
+      }
+
+      .section-head h2 {
+        margin: 0;
+        font-size: clamp(1.5rem, 3vw, 2rem);
+      }
+
+      .section-head p {
+        margin: 0.35rem 0 0;
+        max-width: 60ch;
+        color: var(--muted);
+      }
+
+      .forum-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        padding: 0 1.5rem;
+      }
+
+      .topic-card {
+        display: grid;
+        gap: 1rem;
+        padding: 1.25rem;
+        border-radius: 24px;
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 16px 36px rgba(31, 42, 46, 0.08);
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .topic-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 20px 42px rgba(31, 42, 46, 0.12);
+      }
+
+      .topic-card header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .topic-card h3 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+
+      .badge {
+        flex-shrink: 0;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(244, 180, 0, 0.14);
+        color: var(--accent-deep);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .topic-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .prompt {
+        padding: 0.95rem 1rem;
+        border-radius: 18px;
+        background: rgba(47, 93, 80, 0.06);
+        border: 1px solid rgba(47, 93, 80, 0.12);
+        color: #27453b;
+      }
+
+      .prompt strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        padding-top: 0.1rem;
+      }
+
+      .meta span {
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        background: var(--panel-strong);
+        border: 1px solid var(--line);
+        font-size: 0.84rem;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: var(--forest);
+        font-weight: 700;
+      }
+
+      .footer-note {
+        margin: 1.5rem;
+        padding: 1rem 1.1rem;
+        border-left: 4px solid var(--accent);
+        background: rgba(255, 255, 255, 0.52);
+        color: var(--muted);
+        border-radius: 0 18px 18px 0;
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100% - 1rem, 1180px);
+          padding-top: 1rem;
+        }
+
+        .topbar,
+        .hero,
+        .forum-grid {
+          padding-left: 0.5rem;
+          padding-right: 0.5rem;
+        }
+
+        .section-head,
+        .footer-note {
+          margin-left: 0.5rem;
+          margin-right: 0.5rem;
+        }
+
+        .hero-panel {
+          padding: 1.4rem;
+          border-radius: 22px;
+        }
+
+        .hero-stats {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>{title}</h1>
+    <main class="shell">
+      <div class="topbar">
+        <a class="brand" href="/">
+          <span class="brand-mark">VC</span>
+          <span>Volvo CE Forum</span>
+        </a>
+
+        <a class="admin-button" href="/admin">Admin Login</a>
+      </div>
+
+      <section class="hero">
+        <div class="hero-panel">
+          <div class="eyebrow">Field Knowledge Hub</div>
+          <h1>{title}</h1>
+          <p>
+            A simple discussion space for Volvo Construction Equipment machine systems.
+            Open a board, add a contribution, and attach pictures or short video clips to
+            document service cases and troubleshooting findings.
+          </p>
+
+          <div class="hero-stats">
+            <div>
+              <strong>{topics.length}</strong>
+              <span>Core system topics</span>
+            </div>
+            <div>
+              <strong>156</strong>
+              <span>Starter discussions</span>
+            </div>
+            <div>
+              <strong>12</strong>
+              <span>Members online now</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="topics-heading">
+        <div class="section-head">
+          <div>
+            <h2 id="topics-heading">Topic Boards</h2>
+            <p>
+              Click any board to browse posts and contribute your own notes, images, or short clips.
+            </p>
+          </div>
+        </div>
+
+        <div class="forum-grid">
+          {topics.map((topic) => (
+            <a class="topic-card" href={`/topics/${topic.slug}/`}>
+              <header>
+                <h3>{topic.name}</h3>
+                <span class="badge">Open</span>
+              </header>
+
+              <p>{topic.description}</p>
+
+              <div class="prompt">
+                <strong>Example thread</strong>
+                {topic.prompt}
+              </div>
+
+              <div class="meta">
+                <span>{topic.threads} threads</span>
+                <span>{topic.posts} posts</span>
+                <span>{topic.lastActive}</span>
+              </div>
+
+              <span class="cta">Open board -></span>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Contributions are stored in the browser for this demo, so it feels interactive without needing a backend yet.
+      </p>
+    </main>
   </body>
 </html>

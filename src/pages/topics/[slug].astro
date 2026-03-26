@@ -1,0 +1,553 @@
+---
+import { topics } from "../../data/forum";
+
+export function getStaticPaths() {
+  return topics.map((topic) => ({
+    params: { slug: topic.slug },
+    props: { topic },
+  }));
+}
+
+const { topic } = Astro.props;
+const title = `${topic.name} | Volvo CE Forum`;
+const threadStorageKey = `volvo-ce-forum:${topic.slug}:threads`;
+const replyStorageKey = `volvo-ce-forum:${topic.slug}:replies`;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+    <style>
+      :root {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color-scheme: light;
+        --bg: #f3f0e8;
+        --panel: rgba(255, 255, 255, 0.86);
+        --panel-strong: #ffffff;
+        --ink: #1f2a2e;
+        --muted: #5b666e;
+        --line: rgba(31, 42, 46, 0.12);
+        --accent: #f4b400;
+        --forest: #2f5d50;
+        --shadow: 0 24px 60px rgba(31, 42, 46, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(244, 180, 0, 0.16), transparent 28%),
+          radial-gradient(circle at top right, rgba(47, 93, 80, 0.15), transparent 24%),
+          linear-gradient(180deg, #ebe6da 0%, var(--bg) 55%, #f7f4ed 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 2rem 0 3rem;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0 1rem 1rem;
+      }
+
+      .crumbs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        color: var(--muted);
+      }
+
+      .crumbs a {
+        font-weight: 700;
+        color: var(--forest);
+      }
+
+      .admin-button {
+        padding: 0.8rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 42, 46, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 10px 24px rgba(31, 42, 46, 0.08);
+        font-weight: 700;
+      }
+
+      .hero {
+        margin: 0 1rem 1.25rem;
+        border-radius: 28px;
+        padding: 1.6rem;
+        color: #f9faf7;
+        background: linear-gradient(135deg, rgba(47, 93, 80, 0.96), rgba(28, 42, 47, 0.94));
+        box-shadow: var(--shadow);
+      }
+
+      .hero h1 {
+        margin: 0.65rem 0;
+        font-size: clamp(2.2rem, 5vw, 4rem);
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 70ch;
+        color: rgba(249, 250, 247, 0.86);
+        line-height: 1.7;
+      }
+
+      .focus-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-top: 1rem;
+      }
+
+      .focus-list span {
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 0.86rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+        gap: 1rem;
+        padding: 0 1rem;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 24px;
+        padding: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 16px 36px rgba(31, 42, 46, 0.08);
+      }
+
+      .panel h2,
+      .panel h3 {
+        margin-top: 0;
+      }
+
+      .help {
+        margin: -0.2rem 0 0.8rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      :global(.thread-list) {
+        display: grid;
+        gap: 1rem;
+      }
+
+      :global(.thread-link) {
+        display: block;
+        padding: 1.15rem 1.15rem 1.1rem 1.35rem;
+        border-radius: 24px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 247, 0.92));
+        border: 1px solid rgba(255, 255, 255, 0.82);
+        box-shadow:
+          0 18px 34px rgba(31, 42, 46, 0.09),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+        position: relative;
+        overflow: hidden;
+        color: var(--ink) !important;
+        text-decoration: none !important;
+      }
+
+      :global(.thread-link::before) {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 6px;
+        background: linear-gradient(180deg, var(--accent), #ffd86b);
+      }
+
+      :global(.thread-link:hover) {
+        transform: translateY(-2px);
+        border-color: rgba(47, 93, 80, 0.28);
+        box-shadow:
+          0 22px 42px rgba(31, 42, 46, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.76);
+        color: var(--ink) !important;
+        text-decoration: none !important;
+      }
+
+      :global(.thread-link:visited),
+      :global(.thread-link:active),
+      :global(.thread-link h3),
+      :global(.thread-link p),
+      :global(.thread-link span),
+      :global(.thread-link div) {
+        color: inherit;
+        text-decoration: none !important;
+      }
+
+      :global(.thread-link h3) {
+        margin: 0 0 0.35rem;
+        font-size: 1.05rem;
+      }
+
+      :global(.thread-meta) {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      :global(.thread-preview) {
+        margin: 0.65rem 0 0;
+        color: #334046;
+        line-height: 1.55;
+      }
+
+      :global(.thread-count) {
+        display: inline-flex;
+        margin-top: 0.8rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(47, 93, 80, 0.1);
+        color: var(--forest);
+        font-size: 0.82rem;
+        font-weight: 700;
+        border: 1px solid rgba(47, 93, 80, 0.1);
+      }
+
+      .compose-form {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.4rem;
+        font-weight: 700;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid rgba(31, 42, 46, 0.14);
+        border-radius: 16px;
+        padding: 0.9rem 1rem;
+        font: inherit;
+        background: rgba(255, 255, 255, 0.94);
+      }
+
+      textarea {
+        min-height: 150px;
+        resize: vertical;
+      }
+
+      input[type="file"] {
+        padding: 0.75rem;
+        background: rgba(47, 93, 80, 0.04);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 0.9rem 1.2rem;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--accent), #ffd86b);
+        color: #3a2a00;
+      }
+
+      .secondary {
+        background: rgba(31, 42, 46, 0.08);
+        color: var(--ink);
+      }
+
+      .status {
+        min-height: 1.4rem;
+        color: var(--forest);
+        font-weight: 700;
+      }
+
+      .empty {
+        padding: 1rem;
+        border-radius: 18px;
+        background: rgba(47, 93, 80, 0.05);
+        color: var(--muted);
+        border: 1px dashed rgba(47, 93, 80, 0.18);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100% - 1rem, 1180px);
+          padding-top: 1rem;
+        }
+
+        .topbar,
+        .layout {
+          padding-left: 0.25rem;
+          padding-right: 0.25rem;
+        }
+
+        .hero {
+          margin-left: 0.25rem;
+          margin-right: 0.25rem;
+          padding: 1.3rem;
+          border-radius: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="topbar">
+        <div class="crumbs">
+          <a href="/">All topics</a>
+          <span>/</span>
+          <span>{topic.name}</span>
+        </div>
+        <a class="admin-button" href="/admin">Admin Login</a>
+      </div>
+
+      <section class="hero">
+        <span>{topic.lastActive}</span>
+        <h1>{topic.name}</h1>
+        <p>{topic.description}</p>
+        <div class="focus-list">
+          {topic.focus.map((item) => <span>{item}</span>)}
+        </div>
+      </section>
+
+      <section class="layout">
+        <div class="panel">
+          <h2>Discussions</h2>
+          <p class="help">
+            This page lists the discussions for this topic. Open a discussion to read it and reply on its own page.
+          </p>
+          <div class="thread-list" id="thread-list"></div>
+        </div>
+
+        <aside class="panel">
+          <h2>Start A Discussion</h2>
+          <p class="help">
+            You can still contribute from this topic page by creating a new discussion here.
+          </p>
+
+          <form class="compose-form" id="thread-form">
+            <label>
+              Your name
+              <input name="author" type="text" placeholder="Technician name or team" required />
+            </label>
+
+            <label>
+              Discussion title
+              <input name="title" type="text" placeholder={topic.prompt} required />
+            </label>
+
+            <label>
+              Opening message
+              <textarea
+                name="body"
+                placeholder="Describe the issue, question, finding, or service tip."
+                required
+              ></textarea>
+            </label>
+
+            <label>
+              Photos or short video clips
+              <input id="thread-attachments" name="attachments" type="file" accept="image/*,video/*" multiple />
+            </label>
+
+            <div class="actions">
+              <button class="primary" type="submit">Publish discussion</button>
+              <button class="secondary" id="clear-topic-data" type="button">Clear browser data</button>
+            </div>
+
+            <div class="status" id="thread-status"></div>
+          </form>
+        </aside>
+      </section>
+    </main>
+
+    <script define:vars={{ topic, threadStorageKey, replyStorageKey }}>
+      const threadList = document.querySelector("#thread-list");
+      const threadForm = document.querySelector("#thread-form");
+      const threadStatus = document.querySelector("#thread-status");
+      const clearTopicDataButton = document.querySelector("#clear-topic-data");
+      const threadAttachmentsInput = document.querySelector("#thread-attachments");
+
+      const formatTime = () =>
+        new Date().toLocaleString([], {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+      const slugify = (value) =>
+        String(value)
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+
+      const escapeHtml = (value) =>
+        String(value ?? "").replace(/[&<>"']/g, (character) => {
+          const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return replacements[character] || character;
+        });
+
+      const loadJson = (key, fallback) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch {
+          return fallback;
+        }
+      };
+
+      const saveJson = (key, value) => {
+        localStorage.setItem(key, JSON.stringify(value));
+      };
+
+      const buildDefaultThreads = () =>
+        topic.samplePosts.map((post, index) => ({
+          id: `starter-${index + 1}`,
+          author: post.author,
+          title: post.title,
+          body: post.body,
+          timestamp: post.timestamp,
+          media: [],
+          starter: true,
+        }));
+
+      const loadThreads = () => {
+        const starterThreads = buildDefaultThreads();
+        const userThreads = loadJson(threadStorageKey, []);
+        return [...starterThreads, ...userThreads];
+      };
+
+      const loadReplies = () => loadJson(replyStorageKey, {});
+
+      const fileToDataUrl = (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve({
+              name: file.name,
+              type: file.type,
+              dataUrl: reader.result,
+            });
+          reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+          reader.readAsDataURL(file);
+        });
+
+      const renderThreadList = () => {
+        const threads = loadThreads();
+        const replies = loadReplies();
+
+        if (!threads.length) {
+          threadList.innerHTML = `<div class="empty">No discussions available yet.</div>`;
+          return;
+        }
+
+        threadList.innerHTML = threads
+          .map((thread) => {
+            const preview = escapeHtml(thread.body).slice(0, 140);
+            const replyCount = replies[thread.id]?.length ?? 0;
+            const threadUrl = `/topics/${topic.slug}/discussion/?thread=${encodeURIComponent(thread.id)}`;
+
+            return `
+              <a class="thread-link" href="${threadUrl}">
+                <h3>${escapeHtml(thread.title)}</h3>
+                <div class="thread-meta">${escapeHtml(thread.author)} | ${escapeHtml(thread.timestamp)}</div>
+                <p class="thread-preview">${preview}${thread.body.length > 140 ? "..." : ""}</p>
+                <span class="thread-count">${replyCount} ${replyCount === 1 ? "reply" : "replies"}</span>
+              </a>
+            `;
+          })
+          .join("");
+      };
+
+      threadForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        threadStatus.textContent = "Saving new discussion...";
+
+        const formData = new FormData(threadForm);
+        const files = Array.from(threadAttachmentsInput?.files ?? []);
+
+        try {
+          const media = await Promise.all(files.map(fileToDataUrl));
+          const userThreads = loadJson(threadStorageKey, []);
+          const titleValue = String(formData.get("title") ?? "");
+
+          const newThread = {
+            id: `user-${slugify(titleValue)}-${Date.now()}`,
+            author: formData.get("author"),
+            title: titleValue,
+            body: formData.get("body"),
+            timestamp: formatTime(),
+            media,
+            starter: false,
+          };
+
+          userThreads.unshift(newThread);
+          saveJson(threadStorageKey, userThreads);
+          threadForm.reset();
+          renderThreadList();
+          threadStatus.textContent = "Discussion published. Open it from the list to reply.";
+        } catch (error) {
+          threadStatus.textContent =
+            error instanceof Error ? error.message : "Could not save the discussion.";
+        }
+      });
+
+      clearTopicDataButton?.addEventListener("click", () => {
+        localStorage.removeItem(threadStorageKey);
+        localStorage.removeItem(replyStorageKey);
+        renderThreadList();
+        threadStatus.textContent = "Browser-saved discussions and replies cleared for this topic.";
+      });
+
+      renderThreadList();
+    </script>
+  </body>
+</html>

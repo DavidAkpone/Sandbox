@@ -1,0 +1,514 @@
+---
+import { topics } from "../../../data/forum";
+
+export function getStaticPaths() {
+  return topics.map((topic) => ({
+    params: { slug: topic.slug },
+    props: { topic },
+  }));
+}
+
+const { topic } = Astro.props;
+const title = `${topic.name} Discussion | Volvo CE Forum`;
+const threadStorageKey = `volvo-ce-forum:${topic.slug}:threads`;
+const replyStorageKey = `volvo-ce-forum:${topic.slug}:replies`;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+    <style>
+      :root {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color-scheme: light;
+        --bg: #f3f0e8;
+        --panel: rgba(255, 255, 255, 0.86);
+        --panel-strong: #ffffff;
+        --ink: #1f2a2e;
+        --muted: #5b666e;
+        --line: rgba(31, 42, 46, 0.12);
+        --accent: #f4b400;
+        --forest: #2f5d50;
+        --shadow: 0 24px 60px rgba(31, 42, 46, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(244, 180, 0, 0.16), transparent 28%),
+          radial-gradient(circle at top right, rgba(47, 93, 80, 0.15), transparent 24%),
+          linear-gradient(180deg, #ebe6da 0%, var(--bg) 55%, #f7f4ed 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: min(1100px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 2rem 0 3rem;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0 1rem 1rem;
+      }
+
+      .crumbs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        color: var(--muted);
+      }
+
+      .crumbs a {
+        font-weight: 700;
+        color: var(--forest);
+      }
+
+      .admin-button {
+        padding: 0.8rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 42, 46, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 10px 24px rgba(31, 42, 46, 0.08);
+        font-weight: 700;
+      }
+
+      .panel {
+        margin: 0 1rem 1rem;
+        background: var(--panel);
+        border-radius: 24px;
+        padding: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 16px 36px rgba(31, 42, 46, 0.08);
+      }
+
+      .hero {
+        color: #f9faf7;
+        background: linear-gradient(135deg, rgba(47, 93, 80, 0.96), rgba(28, 42, 47, 0.94));
+      }
+
+      .hero h1 {
+        margin: 0.65rem 0;
+        font-size: clamp(2rem, 5vw, 3.4rem);
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 70ch;
+        color: rgba(249, 250, 247, 0.86);
+        line-height: 1.7;
+      }
+
+      .thread-meta,
+      .reply-meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .thread-card,
+      .reply-card {
+        padding: 1rem;
+        border-radius: 20px;
+        background: var(--panel-strong);
+        border: 1px solid var(--line);
+      }
+
+      .thread-card p,
+      .reply-card p {
+        margin: 0.75rem 0 0;
+        line-height: 1.7;
+        color: #334046;
+        white-space: pre-wrap;
+      }
+
+      .reply-list {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .section-label {
+        margin: 0 0 0.75rem;
+        color: var(--forest);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.9rem;
+      }
+
+      .media-card {
+        overflow: hidden;
+        border-radius: 18px;
+        background: #f4f7f8;
+        border: 1px solid var(--line);
+      }
+
+      .media-card img,
+      .media-card video {
+        display: block;
+        width: 100%;
+        max-height: 220px;
+        object-fit: cover;
+        background: #dfe7e9;
+      }
+
+      .media-card span {
+        display: block;
+        padding: 0.6rem 0.75rem 0.75rem;
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .compose-form {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.4rem;
+        font-weight: 700;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid rgba(31, 42, 46, 0.14);
+        border-radius: 16px;
+        padding: 0.9rem 1rem;
+        font: inherit;
+        background: rgba(255, 255, 255, 0.94);
+      }
+
+      textarea {
+        min-height: 150px;
+        resize: vertical;
+      }
+
+      input[type="file"] {
+        padding: 0.75rem;
+        background: rgba(47, 93, 80, 0.04);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 0.9rem 1.2rem;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--accent), #ffd86b);
+        color: #3a2a00;
+      }
+
+      .status {
+        min-height: 1.4rem;
+        color: var(--forest);
+        font-weight: 700;
+      }
+
+      .empty {
+        padding: 1rem;
+        border-radius: 18px;
+        background: rgba(47, 93, 80, 0.05);
+        color: var(--muted);
+        border: 1px dashed rgba(47, 93, 80, 0.18);
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100% - 1rem, 1100px);
+          padding-top: 1rem;
+        }
+
+        .topbar {
+          padding-left: 0.25rem;
+          padding-right: 0.25rem;
+        }
+
+        .panel {
+          margin-left: 0.25rem;
+          margin-right: 0.25rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="topbar">
+        <div class="crumbs">
+          <a href="/">All topics</a>
+          <span>/</span>
+          <a href={`/topics/${topic.slug}/`}>{topic.name}</a>
+          <span>/</span>
+          <span>Discussion</span>
+        </div>
+        <a class="admin-button" href="/admin">Admin Login</a>
+      </div>
+
+      <section class="panel hero">
+        <div id="hero-content"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-label">Discussion</div>
+        <div id="thread-content"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-label">Replies</div>
+        <div class="reply-list" id="reply-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-label">Reply</div>
+        <p>Open discussion selected. Write your answer here to contribute to this specific discussion.</p>
+
+        <form class="compose-form" id="reply-form">
+          <label>
+            Your name
+            <input name="author" type="text" placeholder="Your name" required />
+          </label>
+
+          <label>
+            Your reply
+            <textarea
+              name="body"
+              placeholder="Add your answer, follow-up question, or troubleshooting note."
+              required
+            ></textarea>
+          </label>
+
+          <label>
+            Photos or short video clips
+            <input id="reply-attachments" name="attachments" type="file" accept="image/*,video/*" multiple />
+          </label>
+
+          <div class="actions">
+            <button class="primary" type="submit">Post reply</button>
+          </div>
+
+          <div class="status" id="reply-status"></div>
+        </form>
+      </section>
+    </main>
+
+    <script define:vars={{ topic, threadStorageKey, replyStorageKey }}>
+      const heroContent = document.querySelector("#hero-content");
+      const threadContent = document.querySelector("#thread-content");
+      const replyList = document.querySelector("#reply-list");
+      const replyForm = document.querySelector("#reply-form");
+      const replyStatus = document.querySelector("#reply-status");
+      const replyAttachmentsInput = document.querySelector("#reply-attachments");
+
+      const params = new URLSearchParams(window.location.search);
+      const requestedThreadId = params.get("thread");
+
+      const formatTime = () =>
+        new Date().toLocaleString([], {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+      const escapeHtml = (value) =>
+        String(value ?? "").replace(/[&<>"']/g, (character) => {
+          const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return replacements[character] || character;
+        });
+
+      const loadJson = (key, fallback) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch {
+          return fallback;
+        }
+      };
+
+      const saveJson = (key, value) => {
+        localStorage.setItem(key, JSON.stringify(value));
+      };
+
+      const buildDefaultThreads = () =>
+        topic.samplePosts.map((post, index) => ({
+          id: `starter-${index + 1}`,
+          author: post.author,
+          title: post.title,
+          body: post.body,
+          timestamp: post.timestamp,
+          media: [],
+          starter: true,
+        }));
+
+      const loadThreads = () => {
+        const starterThreads = buildDefaultThreads();
+        const userThreads = loadJson(threadStorageKey, []);
+        return [...starterThreads, ...userThreads];
+      };
+
+      const loadReplies = () => loadJson(replyStorageKey, {});
+
+      const fileToDataUrl = (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve({
+              name: file.name,
+              type: file.type,
+              dataUrl: reader.result,
+            });
+          reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+          reader.readAsDataURL(file);
+        });
+
+      const buildMediaCard = (media) => {
+        if (!media || !media.dataUrl || !media.type) {
+          return "";
+        }
+
+        const safeName = escapeHtml(media.name);
+
+        if (media.type.startsWith("video/")) {
+          return `
+            <div class="media-card">
+              <video controls preload="metadata" src="${media.dataUrl}"></video>
+              <span>${safeName}</span>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="media-card">
+            <img src="${media.dataUrl}" alt="${safeName}" loading="lazy" />
+            <span>${safeName}</span>
+          </div>
+        `;
+      };
+
+      const threads = loadThreads();
+      const activeThread = threads.find((thread) => thread.id === requestedThreadId) ?? threads[0];
+
+      if (!activeThread) {
+        heroContent.innerHTML = `<h1>Discussion not found</h1><p>Go back to the topic page and open a discussion from the list.</p>`;
+        threadContent.innerHTML = `<div class="empty">No discussion could be loaded.</div>`;
+        replyList.innerHTML = `<div class="empty">Replies are not available because no discussion was found.</div>`;
+        replyForm.style.display = "none";
+      } else {
+        heroContent.innerHTML = `
+          <div>${escapeHtml(topic.name)} discussion</div>
+          <h1>${escapeHtml(activeThread.title)}</h1>
+          <p>This page is dedicated to one discussion. Replies posted here stay attached to this specific thread.</p>
+        `;
+
+        const threadMedia = activeThread.media?.length
+          ? `<div class="media-grid">${activeThread.media.map(buildMediaCard).join("")}</div>`
+          : "";
+
+        threadContent.innerHTML = `
+          <article class="thread-card">
+            <div class="thread-meta">${escapeHtml(activeThread.author)} | ${escapeHtml(activeThread.timestamp)}</div>
+            <p>${escapeHtml(activeThread.body)}</p>
+            ${threadMedia}
+          </article>
+        `;
+
+        const renderReplies = () => {
+          const replies = loadReplies();
+          const threadReplies = replies[activeThread.id] ?? [];
+
+          replyList.innerHTML = threadReplies.length
+            ? threadReplies
+                .map((reply) => {
+                  const replyMedia = reply.media?.length
+                    ? `<div class="media-grid">${reply.media.map(buildMediaCard).join("")}</div>`
+                    : "";
+
+                  return `
+                    <article class="reply-card">
+                      <div class="reply-meta">${escapeHtml(reply.author)} | ${escapeHtml(reply.timestamp)}</div>
+                      <p>${escapeHtml(reply.body)}</p>
+                      ${replyMedia}
+                    </article>
+                  `;
+                })
+                .join("")
+            : `<div class="empty">No replies yet. Be the first to answer this discussion.</div>`;
+        };
+
+        replyForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          replyStatus.textContent = "Saving reply...";
+
+          const formData = new FormData(replyForm);
+          const files = Array.from(replyAttachmentsInput?.files ?? []);
+
+          try {
+            const media = await Promise.all(files.map(fileToDataUrl));
+            const replies = loadReplies();
+            const threadReplies = replies[activeThread.id] ?? [];
+
+            threadReplies.unshift({
+              author: formData.get("author"),
+              body: formData.get("body"),
+              timestamp: formatTime(),
+              media,
+            });
+
+            replies[activeThread.id] = threadReplies;
+            saveJson(replyStorageKey, replies);
+            replyForm.reset();
+            renderReplies();
+            replyStatus.textContent = "Reply posted to this discussion.";
+          } catch (error) {
+            replyStatus.textContent =
+              error instanceof Error ? error.message : "Could not save the reply.";
+          }
+        });
+
+        renderReplies();
+      }
+    </script>
+  </body>
+</html>
