@@ -2,6 +2,7 @@
 import { adminDemoCredentials } from "../data/forum";
 
 const title = "Admin Login | Volvo CE Forum";
+const base = import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -150,7 +151,7 @@ const title = "Admin Login | Volvo CE Forum";
 
         <div class="actions">
           <button type="submit">Demo sign in</button>
-          <a class="back" href="/">Back to forum</a>
+          <a class="back" href={base}>Back to forum</a>
         </div>
 
         <div class="status" id="status"></div>

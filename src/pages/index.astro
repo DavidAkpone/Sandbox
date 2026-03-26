@@ -2,6 +2,7 @@
 import { topics } from "../data/forum";
 
 const title = "Volvo CE Machine Systems Forum";
+const base = import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -319,12 +320,12 @@ const title = "Volvo CE Machine Systems Forum";
   <body>
     <main class="shell">
       <div class="topbar">
-        <a class="brand" href="/">
+        <a class="brand" href={base}>
           <span class="brand-mark">VC</span>
           <span>Volvo CE Forum</span>
         </a>
 
-        <a class="admin-button" href="/admin">Admin Login</a>
+        <a class="admin-button" href={`${base}admin/`}>Admin Login</a>
       </div>
 
       <section class="hero">
@@ -366,7 +367,7 @@ const title = "Volvo CE Machine Systems Forum";
 
         <div class="forum-grid">
           {topics.map((topic) => (
-            <a class="topic-card" href={`/topics/${topic.slug}/`}>
+            <a class="topic-card" href={`${base}topics/${topic.slug}/`}>
               <header>
                 <h3>{topic.name}</h3>
                 <span class="badge">Open</span>

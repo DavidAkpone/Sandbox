@@ -12,6 +12,7 @@ const { topic } = Astro.props;
 const title = `${topic.name} | Volvo CE Forum`;
 const threadStorageKey = `volvo-ce-forum:${topic.slug}:threads`;
 const replyStorageKey = `volvo-ce-forum:${topic.slug}:replies`;
+const base = import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -332,11 +333,11 @@ const replyStorageKey = `volvo-ce-forum:${topic.slug}:replies`;
     <main class="shell">
       <div class="topbar">
         <div class="crumbs">
-          <a href="/">All topics</a>
+          <a href={base}>All topics</a>
           <span>/</span>
           <span>{topic.name}</span>
         </div>
-        <a class="admin-button" href="/admin">Admin Login</a>
+        <a class="admin-button" href={`${base}admin/`}>Admin Login</a>
       </div>
 
       <section class="hero">
@@ -399,7 +400,7 @@ const replyStorageKey = `volvo-ce-forum:${topic.slug}:replies`;
       </section>
     </main>
 
-    <script define:vars={{ topic, threadStorageKey, replyStorageKey }}>
+    <script define:vars={{ topic, threadStorageKey, replyStorageKey, base }}>
       const threadList = document.querySelector("#thread-list");
       const threadForm = document.querySelector("#thread-form");
       const threadStatus = document.querySelector("#thread-status");
@@ -493,7 +494,7 @@ const replyStorageKey = `volvo-ce-forum:${topic.slug}:replies`;
           .map((thread) => {
             const preview = escapeHtml(thread.body).slice(0, 140);
             const replyCount = replies[thread.id]?.length ?? 0;
-            const threadUrl = `/topics/${topic.slug}/discussion/?thread=${encodeURIComponent(thread.id)}`;
+            const threadUrl = `${base}topics/${topic.slug}/discussion/?thread=${encodeURIComponent(thread.id)}`;
 
             return `
               <a class="thread-link" href="${threadUrl}">
